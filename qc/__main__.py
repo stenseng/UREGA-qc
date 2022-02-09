@@ -10,9 +10,9 @@ import logging
 from signal import SIGINT, SIGTERM, signal
 from sys import exit
 
+from qc.multipath import multipath
 from qc.qc import qc
 from qc.slips import slips
-from qc.multipath import multipath
 
 
 def procSigint(signum, frame):
@@ -31,7 +31,7 @@ signal(SIGTERM, procSigterm)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("-l", "--logfile", help="Log to file. Default output is terminal.")
-arser.add_argument(
+parser.add_argument(
     "-v", "--verbosity", action="count", default=0, help="Increase verbosity level."
 )
 args = parser.parse_args()
