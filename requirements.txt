@@ -1,2 +1,3 @@
-ntripstreams
-psycopg2
+georinex>=1.16
+# ntripstreams
+# psycopg2
