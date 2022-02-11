@@ -1,3 +1,4 @@
 georinex>=1.16
+numpy
 # ntripstreams
 # psycopg2
