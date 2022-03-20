@@ -11,8 +11,8 @@ from matplotlib.pyplot import figure, show
 import matplotlib.pyplot as plt
 # from qc.__version__ import __version__
 
-class Multipath:
 
+class Multipath:
 
     def __init__(self, obs):  # , signals):
         self.obs = obs
@@ -28,7 +28,7 @@ class Multipath:
 
     def load_constellation_freq(self):
 
-        ''' 
+        '''
         Function that loads frequency variables for each constellation
 
         Inputs: none
@@ -46,7 +46,7 @@ class Multipath:
         return GPS_freq, GLONASS_freq, Galileo_freq, SBAS_freq, QZSS_freq, BDS_freq, IRNSS_freq
 
     def sort_sat_types(self, obs):
-        ''' 
+        '''
         Function that creates arrays for each satellite constellation type
         and then assigns satellites from the RINEX file to the corresponding arrays
 
@@ -69,19 +69,19 @@ class Multipath:
 
         # Assign values to distinguish
         for i in range(0, len(obs.sv)):
-            if str(obs.sv[i].values)[0]== 'G' :
+            if str(obs.sv[i].values)[0] == 'G':
                 svG.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0]== 'R' :
+            elif str(obs.sv[i].values)[0] == 'R':
                 svR.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0]== 'S' :
+            elif str(obs.sv[i].values)[0] == 'S':
                 svS.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0]== 'E' :
+            elif str(obs.sv[i].values)[0] == 'E':
                 svE.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0]== 'C' :
+            elif str(obs.sv[i].values)[0] == 'C':
                 svC.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0]== 'J' :
+            elif str(obs.sv[i].values)[0] == 'J':
                 svJ.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0]== 'I' :
+            elif str(obs.sv[i].values)[0] == 'I':
                 svI.append(str(obs.sv[i].values))
 
         return svG, svR, svS, svE, svC, svJ, svI
@@ -111,7 +111,7 @@ class Multipath:
 
         '''
         Calculate code multipath for first frequency, for GPS
-    
+
         Inputs:
         obs: the loaded observation file
         sv: chosen satellite vehicle
@@ -141,8 +141,12 @@ class Multipath:
 
     def MP1(self, P, L1, L2, f1, f2):
 
-        ### Return Multipath equation for the first frequency
+        '''
+        
+        Return Multipath equation for the first frequency
 
+        '''
+        
         MP = P - (f1**2 + f2**2)/(f1**2 - f2**2)*L1 + (2*(f2**2))/(f1**2 - f2**2)*L2
         return MP
 
@@ -173,7 +177,7 @@ class Multipath:
 # %%
 # Testing code (comment out rinex file loading (line 151) after first time, as it takes a long time to load)
 obs = gr.load(
-    '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx', 
+    '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
     tlim=['2021-11-03T11:32', '2021-11-03T12:32'])
 mptest = Multipath(obs)
 MP = mptest.get_MP()
