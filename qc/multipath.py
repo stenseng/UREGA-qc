@@ -21,10 +21,16 @@ class Multipath:
     def get_MP(self):
         freq = self.load_constellation_freq()
         sv_all = self.sort_sat_types(self.obs)
-        self.MP_G = self.append_MP_arrays(sv_all[0], self.obs, freq[0])
-        # print(MP_G)
-        self.plot_all_MP(sv_all[0], self.MP_G)
-        return self.MP_G
+
+        # Comment out the GPS or GLONASS lines (3 in total) depending on which is used
+        #self.MP_G, sv_legend = self.append_MP_arrays(sv_all[0], self.obs, freq[0])  # GPS
+        self.MP_R, sv_legend = self.append_MP_arrays(sv_all[1], self.obs, freq[1])  # GLONASS
+
+        #self.plot_all_MP(sv_legend, self.MP_G)  # GPS
+        self.plot_all_MP(sv_legend, self.MP_R)  # GLONASS
+
+        #return self.MP_G  # GPS
+        return self.MP_R  # GLONASS
 
     def load_constellation_freq(self):
 
@@ -103,9 +109,16 @@ class Multipath:
         '''
 
         MP = []
+        sv_legend = []
         for i in range(0, len(sv)):
-            MP.append(self.calculate_MP1_G(obs, sv[i], freq))
-        return MP
+            MP1 = self.calculate_MP1_G(obs, sv[i], freq)
+            if MP1 is None:
+                continue
+            else:
+                MP.append(MP1)
+                sv_legend.append(sv[i])
+        return MP, sv_legend
+
 
     def calculate_MP1_G(self, obs, sv, freq):
 
@@ -127,9 +140,16 @@ class Multipath:
         f2 = freq[1]*1e6
         obs = obs.sel(sv=sv).dropna(dim='time', how='all')
 
-        P1 = obs.C1C
-        L1 = obs.L1C*c/f1
-        L2 = obs.L2W*c/f2
+        obs_codes = self.select_default_observables_MP1(obs)
+        if obs_codes is None:
+            return None
+        else:
+            P1 = obs_codes[0]
+            L1 = obs_codes[1]
+            L2 = obs_codes[2]
+
+        L1 = L1*c/f1
+        L2 = L2*c/f2
 
         MP = self.MP1(P1, L1, L2, f1, f2)
 
@@ -149,6 +169,57 @@ class Multipath:
         
         MP = P - (f1**2 + f2**2)/(f1**2 - f2**2)*L1 + (2*(f2**2))/(f1**2 - f2**2)*L2
         return MP
+
+    def select_default_observables_MP1(self, obs):
+
+        '''
+
+        Set default values for the P1, L1 and L2 observables.
+        The default values are C1C, L1C, L2C. 
+        If these are not available (they are NaN or not included), 
+        use the first available element.
+        If P1, L1, or L2 cannot be set at all, don't calculate it and skip sat
+
+        Input:
+        obs: the loaded observation file
+
+        Outputs:
+        P1: L1 pseudorange
+        L1: L1 carrier phase
+        L2: L2 carrier phase
+
+        '''
+
+        # Find non-nan data variables
+        obsNNan_names  = [var for var in obs.data_vars if not np.isnan(obs.data_vars[var].values).all()]
+
+        # Get all observable types in separate sets
+        P1_all = [var for var in obsNNan_names if var[0:2] == 'C1']
+        L1_all = [var for var in obsNNan_names if var[0:2] == 'L1']
+        L2_all = [var for var in obsNNan_names if var[0:2] == 'L2']
+
+        # Make a check if the '_all' sets above are empty. 
+        # If even 1 of them is empty, skip satellite (don't calculate MP for it)
+        if P1_all == [] or L1_all == [] or L2_all == []:
+            return None
+
+        # Specify default P1, L1 and L2 (will also need to add a condition if the '_all' sets above are empty)
+        if 'C1C' in P1_all:
+            P1 = obs.C1C  # If C1C is available, use it
+        else:
+            P1 = obs[P1_all[0]]  # Otherwise select the first element of the pseudorange set
+
+        if 'L1C' in L1_all:
+            L1 = obs.L1C  # If L1C is available, use it
+        else:
+            L1 = obs[L1_all[0]]  # Otherwise select the first element of the L1 set
+
+        if 'L2C' in L2_all:
+            L2 = obs.L2C  # If L2C is available, use it
+        else:
+            L2 = obs[L2_all[0]]  # Otherwise select the first element of the L2 set
+
+        return [P1, L1, L2]
 
     def plot_all_MP(self, sv, MP):
 
