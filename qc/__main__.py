@@ -9,10 +9,11 @@ import argparse
 import logging
 from signal import SIGINT, SIGTERM, signal
 from sys import exit
+import georinex as gr
 
-from qc.multipath import multipath
-from qc.qc import qc
-from qc.slips import slips
+from qc.multipath import Multipath
+# from qc.qc import qc
+# from qc.slips import slips
 
 
 def procSigint(signum, frame):
@@ -51,3 +52,9 @@ if args.logfile:
     )
 else:
     logging.basicConfig(level=logLevel, format="%(asctime)s;%(levelname)s;%(message)s")
+
+obs = gr.load(
+    '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
+    tlim=['2021-11-03T11:32', '2021-11-03T12:32'])
+mptest = Multipath(obs)
+MP = mptest.get_MP()

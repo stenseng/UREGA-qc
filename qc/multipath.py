@@ -23,14 +23,14 @@ class Multipath:
         sv_all = self.sort_sat_types(self.obs)
 
         # Comment out the GPS or GLONASS lines (3 in total) depending on which is used
-        #self.MP_G, sv_legend = self.append_MP_arrays(sv_all[0], self.obs, freq[0])  # GPS
-        self.MP_R, sv_legend = self.append_MP_arrays(sv_all[1], self.obs, freq[1])  # GLONASS
+        self.MP_G, sv_legend = self.append_MP_arrays(sv_all[0], self.obs, freq[0])  # GPS
+        #self.MP_R, sv_legend = self.append_MP_arrays(sv_all[1], self.obs, freq[1])  # GLONASS
 
-        #self.plot_all_MP(sv_legend, self.MP_G)  # GPS
-        self.plot_all_MP(sv_legend, self.MP_R)  # GLONASS
+        self.plot_all_MP(sv_legend, self.MP_G)  # GPS
+        #self.plot_all_MP(sv_legend, self.MP_R)  # GLONASS
 
-        #return self.MP_G  # GPS
-        return self.MP_R  # GLONASS
+        return self.MP_G  # GPS
+        #return self.MP_R  # GLONASS
 
     def load_constellation_freq(self):
 
@@ -244,11 +244,10 @@ class Multipath:
         plt.ylabel('MP1 [meters]')
         show()
 
-
-# %%
-# Testing code (comment out rinex file loading (line 151) after first time, as it takes a long time to load)
-obs = gr.load(
-    '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
-    tlim=['2021-11-03T11:32', '2021-11-03T12:32'])
-mptest = Multipath(obs)
-MP = mptest.get_MP()
+# 
+# Testing code (comment out rinex file loading after first time, as it takes a long time to load)
+# obs = gr.load(
+#    '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
+#    tlim=['2021-11-03T11:32', '2021-11-03T12:32'])
+# mptest = Multipath(obs)
+# MP = mptest.get_MP()
