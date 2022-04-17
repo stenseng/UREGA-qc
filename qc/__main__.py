@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-@author: Lars Stenseng
+@author: Lars Stenseng.
+
 @mail: lars@stenseng.net
 """
 
@@ -31,9 +32,12 @@ signal(SIGTERM, procSigterm)
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("-l", "--logfile", help="Log to file. Default output is terminal.")
+parser.add_argument("-l",
+                    "--logfile",
+                    help="Log to file. Default output is terminal.")
 parser.add_argument(
-    "-v", "--verbosity", action="count", default=0, help="Increase verbosity level."
+    "-v", "--verbosity",
+    action="count", default=0, help="Increase verbosity level."
 )
 args = parser.parse_args()
 
@@ -51,10 +55,19 @@ if args.logfile:
         format="%(asctime)s;%(levelname)s;%(message)s",
     )
 else:
-    logging.basicConfig(level=logLevel, format="%(asctime)s;%(levelname)s;%(message)s")
+    logging.basicConfig(level=logLevel,
+                        format="%(asctime)s;%(levelname)s;%(message)s")
 
+# Load obs file - used for multipath
 obs = gr.load(
     '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
     tlim=['2021-11-03T11:32', '2021-11-03T12:32'])
-mptest = Multipath(obs)
+
+# Load rinex 3 header
+hdr = gr.rinexheader(
+    '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx')
+
+# Call multipath object
+mptest = Multipath(obs, 'G', hdr)  # 'G'/'R'/'E'/'C' ('M' coming soon)
+# Use function get_MP to get MP1 (more coming soon)
 MP = mptest.get_MP()
