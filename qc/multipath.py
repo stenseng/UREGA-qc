@@ -226,17 +226,17 @@ class Multipath:
 
         # Specify default P1, L1 and L2
         # (will also need to add condition if the '_all' sets above are empty)
-        if 'C1C' in P1_all:
+        if const_def[0] in P1_all:
             P1 = obs[const_def[0]]  # If C1C is available, use it
         else:
             P1 = obs[P1_all[0]]  # Else select first element of pseudorange set
 
-        if 'L1C' in L1_all:
+        if const_def[1] in L1_all:
             L1 = obs[const_def[1]]  # If L1C is available, use it
         else:
             L1 = obs[L1_all[0]]  # Else select first element of L1 set
 
-        if 'L2C' in L2_all:
+        if const_def[2] in L2_all:
             L2 = obs[const_def[2]]  # If L2C is available, use it
         else:
             L2 = obs[L2_all[0]]  # Else select first element of L2 set
@@ -297,10 +297,10 @@ class Multipath:
             f3 = 1202.025
             freq = [f1, f2, f3]
         elif self.const == 'E':
-            const_def = ['C1', 'L2', 'L8']
-            freq = [1575.42, 1278.75, 1191.795]  # E1,E6,E5 for Galileo(no L2)
+            const_def = ['C1A', 'L1C', 'L8I']
+            freq = [1575.42, 1191.795, 1278.75]  # E1,E5,E6 for Galileo(no L2)
         elif self.const == 'C':
-            const_def = ['C2', 'L2', 'L7']
+            const_def = ['C2I', 'L2I', 'L7I']
             freq = [1561.098, 1207.14, 1268.52]  # B1, B2, B3 for BeiDou
         else:
             # Placeholder: a case for mixed should be added
