@@ -20,7 +20,7 @@ class Multipath:
         self.hdr = hdr
         self.const = const  # Constellation type (G/R/E/C). Mixed coming soon
         self.MP_eq = MP_eq  # MP equation for k frequency (array:1/2/5/all)
-        self.codes = codes
+        self.codes = codes  # Own obs codes (['C1C','C2C','C5I','L1C','L2C'])
 
     def get_MP(self):
         """Master function that uses all other functions to return MP."""
@@ -138,7 +138,7 @@ class Multipath:
 
     def calculate_MP(self, obs, sv):
         """
-        Calculate code multipath for first frequency, for GPS.
+        Calculate code multipath for chosen constellation and MP frequency
 
         Inputs:
         obs: the loaded observation file
@@ -254,7 +254,7 @@ class Multipath:
         elif self.MP_eq == 5:
             if P5_all == [] or L1_all == [] or L2_all == []:
                 return None
-
+        
         # Specify default P1, P2, P5, L1 and L2
         # (will also need to add condition if the '_all' sets above are empty)
         if const_def[0] in P1_all:
@@ -370,14 +370,5 @@ class Multipath:
         ax.grid()
         ax.legend()
         plt.xlabel('Time')
-        plt.ylabel('MP1 [meters]')
+        plt.ylabel('MP' + str(self.MP_eq) + ' [meters]')
         show()
-
-
-# Testing code (comment out rinex file loading after first time,
-# as it takes a long time to load)
-# obs = gr.load(
-#    '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
-#    tlim=['2021-11-03T11:32', '2021-11-03T12:32'])
-# mptest = Multipath(obs)
-# MP = mptest.get_MP()

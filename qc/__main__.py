@@ -70,7 +70,8 @@ else:
 # Test observation codes (G -> ['C1C', 'L1C', 'L2W'])
 # codes = ['C1C', 'L1C', 'L2W']
 # Call multipath object
-mptest = Multipath(obs, hdr, 'C', MP_eq=5)  # , codes)  # 'G'/'R'/'E'/'C' ('M' coming soon)
+MP_eq=5
+mptest = Multipath(obs, hdr, 'G', MP_eq=MP_eq)  # , codes)  # 'G'/'R'/'E'/'C' ('M' coming soon)
 # Use function get_MP to get MP1 (more coming soon)
 # , info
 MP = mptest.get_MP()
