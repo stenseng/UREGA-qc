@@ -157,13 +157,13 @@ class Multipath:
         f2 = freq[1]*1e6
         f5 = freq[2]*1e6
         obs = obs.sel(sv=sv).dropna(dim='time', how='all')
-        # print(self.codes)
-        # print(const_def)
-        # if self.codes is None:
-        obs_codes = self.select_default_observables_MP1(obs, const_def)
+        print(self.codes)
+        print(const_def)
+        if self.codes is None:
+            obs_codes = self.select_default_observables_MP1(obs, const_def)
         #  out_codes = const_def
-        # else:
-        #    obs_codes = self.select_default_observables_MP1(obs, self.codes)
+        else:
+            obs_codes = self.select_default_observables_MP1(obs, self.codes)
         #    out_codes = self.codes
 
         if obs_codes is None:
@@ -254,7 +254,7 @@ class Multipath:
         elif self.MP_eq == 5:
             if P5_all == [] or L1_all == [] or L2_all == []:
                 return None
-        
+
         # Specify default P1, P2, P5, L1 and L2
         # (will also need to add condition if the '_all' sets above are empty)
         if const_def[0] in P1_all:

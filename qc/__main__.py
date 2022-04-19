@@ -67,11 +67,13 @@ else:
 #hdr = gr.rinexheader(
 #    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx')
 
-# Test observation codes (G -> ['C1C', 'L1C', 'L2W'])
-# codes = ['C1C', 'L1C', 'L2W']
 # Call multipath object
-MP_eq=5
-mptest = Multipath(obs, hdr, 'G', MP_eq=MP_eq)  # , codes)  # 'G'/'R'/'E'/'C' ('M' coming soon)
+MP_eq=2
+codes = ['C1C', 'C2C', 'C5I', 'L1C', 'L2W']  # GPS test
+# codes = ['C1P', 'C2C', 'C3I', 'L1C', 'L2C']  # GLONASS test
+# codes = ['C1A', 'C8Q', 'C6A', 'L1C', 'L8I']  # Galileo test
+# codes = ['C2X', 'C7I', 'C6I', 'L2I', 'L7I']  # BeiDou test
+mptest = Multipath(obs, hdr, 'G', MP_eq=MP_eq, codes=codes) # 'G'/'R'/'E'/'C' ('M' coming soon)
 # Use function get_MP to get MP1 (more coming soon)
 # , info
 MP = mptest.get_MP()
