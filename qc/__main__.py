@@ -59,15 +59,18 @@ else:
                         format="%(asctime)s;%(levelname)s;%(message)s")
 
 # Load obs file - used for multipath
-obs = gr.load(
-    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
-    tlim=['2021-11-03T10:32', '2021-11-03T11:32'])
+#obs = gr.load(
+#    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
+#    tlim=['2021-11-03T10:32', '2021-11-03T11:32'])
 
 # Load rinex 3 header
-hdr = gr.rinexheader(
-    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx')
+#hdr = gr.rinexheader(
+#    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx')
 
+# Test observation codes (G -> ['C1C', 'L1C', 'L2W'])
+# codes = ['C1C', 'L1C', 'L2W']
 # Call multipath object
-mptest = Multipath(obs, 'E', hdr)  # 'G'/'R'/'E'/'C' ('M' coming soon)
+mptest = Multipath(obs, hdr, 'C', MP_eq=5)  # , codes)  # 'G'/'R'/'E'/'C' ('M' coming soon)
 # Use function get_MP to get MP1 (more coming soon)
+# , info
 MP = mptest.get_MP()
