@@ -1,229 +1,358 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-@author: Lars Stenseng
+@author: Lars Stenseng.
+
 @mail: lars@stenseng.net
 """
 
 import numpy as np
-import georinex as gr
 from matplotlib.pyplot import figure, show
 import matplotlib.pyplot as plt
 # from qc.__version__ import __version__
 
 
 class Multipath:
+    """The class containing functions for computing various MP equations."""
 
-    def __init__(self, obs):  # , signals):
+    def __init__(self, obs, hdr, const: str, MP_eq=1, codes=None):
         self.obs = obs
-        # self.signals = signals
+        self.hdr = hdr
+        self.const = const  # Constellation type (G/R/E/C). Mixed coming soon
+        self.MP_eq = MP_eq  # MP equation for k frequency (array:1/2/5/all)
+        self.codes = codes  # Own obs codes (['C1C','C2C','C5I','L1C','L2C'])
 
     def get_MP(self):
-        freq = self.load_constellation_freq()
-        sv_all = self.sort_sat_types(self.obs)
+        """Master function that uses all other functions to return MP."""
+        #  self.info,
+        self.MP, sv_legend = self.append_MP_arrays(self.obs)
 
-        # Comment out the GPS or GLONASS lines (3 in total) depending on which is used
-        self.MP_G, sv_legend = self.append_MP_arrays(sv_all[0], self.obs, freq[0])  # GPS
-        #self.MP_R, sv_legend = self.append_MP_arrays(sv_all[1], self.obs, freq[1])  # GLONASS
+        self.plot_all_MP(sv_legend, self.MP)
 
-        self.plot_all_MP(sv_legend, self.MP_G)  # GPS
-        #self.plot_all_MP(sv_legend, self.MP_R)  # GLONASS
-
-        return self.MP_G  # GPS
-        #return self.MP_R  # GLONASS
-
-    def load_constellation_freq(self):
-
-        '''
-        Function that loads frequency variables for each constellation
-
-        Inputs: none
-        Outputs: constellation arrays
-        '''
-
-        GPS_freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
-        GLONASS_freq = [1603.6875, 1247.3125, 1202.025]  # G1, G2, G3 for GLONASS
-        Galileo_freq = [1575.42, 1278.75, 1191.795]  # E1, E6, E5 for Galileo (no L2)
-        SBAS_freq = [1575.42, 1176.45]  # L1, L5 for SBAS
-        QZSS_freq = [1575.42, 1227.60, 1176.45, 1278.75]  # L1, L2, L5, L6 for QZSS
-        BDS_freq = [1561.098, 1207.14, 1268.52]  # B1, B2, B3 for BeiDou
-        IRNSS_freq = [1176.45, 2492.028]  # L5, S for IRNSS
-
-        return GPS_freq, GLONASS_freq, Galileo_freq, SBAS_freq, QZSS_freq, BDS_freq, IRNSS_freq
+        return self.MP  # , self.info
 
     def sort_sat_types(self, obs):
-        '''
-        Function that creates arrays for each satellite constellation type
-        and then assigns satellites from the RINEX file to the corresponding arrays
+        """
+        Create arrays for each satellite constellation type.
+
+        Using the chosen satellite constellation (G/R/E/C):
+        Assign satellites from the RINEX file to a corresponding array.
+        Should also contain an option for a mixed choice. (M)
 
         Inputs:
         obs: the loaded observation file
 
         Outputs:
         7 lists of satellite numbers that were included in the loaded obs file
-        G-GPS, R-GLONASS, S-SBAS, E-Galileo, C-BeiDou, J-QZSS, I-IRNSS
+        G-GPS, R-GLONASS, E-Galileo, C-BeiDou, S-SBAS, J-QZSS, I-IRNSS
 
-        '''
+        """
+        # Case: G (GPS)
+        if self.const == 'G':
+            svG = []
+            for i in range(0, len(obs.sv)):
+                if str(obs.sv[i].values)[0] == 'G':
+                    svG.append(str(obs.sv[i].values))
+                else:
+                    continue
+            return svG
+        # Case: R (GLONASS)
+        elif self.const == 'R':
+            svR = []
+            for i in range(0, len(obs.sv)):
+                if str(obs.sv[i].values)[0] == 'R':
+                    svR.append(str(obs.sv[i].values))
+                else:
+                    continue
+            return svR
+        # Case: E (Galileo)
+        elif self.const == 'E':
+            svE = []
+            for i in range(0, len(obs.sv)):
+                if str(obs.sv[i].values)[0] == 'E':
+                    svE.append(str(obs.sv[i].values))
+                else:
+                    continue
+            return svE
+        # Case: C (BeiDou)
+        elif self.const == 'C':
+            svC = []
+            for i in range(0, len(obs.sv)):
+                if str(obs.sv[i].values)[0] == 'C':
+                    svC.append(str(obs.sv[i].values))
+                else:
+                    continue
+            return svC
+        # Case: M (Mixed). Default case, used even if case was not specified
+        else:
+            svG = []
+            svR = []
+            svE = []
+            svC = []
 
-        svG = []
-        svR = []
-        svS = []
-        svE = []
-        svC = []
-        svJ = []
-        svI = []
+            # Assign values to distinguish
+            for i in range(0, len(obs.sv)):
+                if str(obs.sv[i].values)[0] == 'G':
+                    svG.append(str(obs.sv[i].values))
+                elif str(obs.sv[i].values)[0] == 'R':
+                    svR.append(str(obs.sv[i].values))
+                elif str(obs.sv[i].values)[0] == 'E':
+                    svE.append(str(obs.sv[i].values))
+                elif str(obs.sv[i].values)[0] == 'C':
+                    svC.append(str(obs.sv[i].values))
+                else:
+                    continue  # Skip satellites that don't match any category
+            return svG, svR, svE, svC
 
-        # Assign values to distinguish
-        for i in range(0, len(obs.sv)):
-            if str(obs.sv[i].values)[0] == 'G':
-                svG.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0] == 'R':
-                svR.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0] == 'S':
-                svS.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0] == 'E':
-                svE.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0] == 'C':
-                svC.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0] == 'J':
-                svJ.append(str(obs.sv[i].values))
-            elif str(obs.sv[i].values)[0] == 'I':
-                svI.append(str(obs.sv[i].values))
+    def append_MP_arrays(self, obs):
+        """
+        Append results from 'calculate_MP' function.
 
-        return svG, svR, svS, svE, svC, svJ, svI
-
-    def append_MP_arrays(self, sv, obs, freq):
-
-        '''
-        Function for appending results from 'calculate_MP1_G' function.
         Used when we want MP results for many satellites in one variable.
 
         Inputs:
         sv: a list of GPS satellites that appear in the loaded RINEX file
         obs: the loaded observation file
-        freq: list of frequencies for GPS
 
         Output:
-        An array of appended MP values for many satellites which makes it easy to store/plot results
+        An array of appended MP values for many satellites
+        which makes it easy to store/plot results
 
-        '''
-
+        """
+        sv = self.sort_sat_types(self.obs)
+        # info = []
         MP = []
         sv_legend = []
+        print(len(sv))
         for i in range(0, len(sv)):
-            MP1 = self.calculate_MP1_G(obs, sv[i], freq)
+            # , obs_codes
+            MP1 = self.calculate_MP(obs, sv[i])
             if MP1 is None:
                 continue
             else:
                 MP.append(MP1)
+                # info.append([sv[i], obs_codes])
                 sv_legend.append(sv[i])
+        # info,
         return MP, sv_legend
 
-
-    def calculate_MP1_G(self, obs, sv, freq):
-
-        '''
-        Calculate code multipath for first frequency, for GPS
+    def calculate_MP(self, obs, sv):
+        """
+        Calculate code multipath for chosen constellation and MP frequency
 
         Inputs:
         obs: the loaded observation file
         sv: chosen satellite vehicle
-        freq: list of frequencies for GPS
+        const: constellation type for getting proper obs types (G/R/E/C)
 
         Output:
         MP1 value
+        """
+        c = 299792458  # Speed of light
 
-        '''
+        # Get default obs types and frequencies for chosen constellation
+        const_def, freq = self.get_const_data_vars(sv)
 
-        c = 299792458
         f1 = freq[0]*1e6
         f2 = freq[1]*1e6
+        f5 = freq[2]*1e6
         obs = obs.sel(sv=sv).dropna(dim='time', how='all')
+        print(self.codes)
+        print(const_def)
+        if self.codes is None:
+            obs_codes = self.select_default_observables_MP1(obs, const_def)
+        #  out_codes = const_def
+        else:
+            obs_codes = self.select_default_observables_MP1(obs, self.codes)
+        #    out_codes = self.codes
 
-        obs_codes = self.select_default_observables_MP1(obs)
         if obs_codes is None:
             return None
         else:
             P1 = obs_codes[0]
-            L1 = obs_codes[1]
-            L2 = obs_codes[2]
+            P2 = obs_codes[1]
+            P5 = obs_codes[2]
+            L1 = obs_codes[3]
+            L2 = obs_codes[4]
 
         L1 = L1*c/f1
         L2 = L2*c/f2
-
-        MP = self.MP1(P1, L1, L2, f1, f2)
+        if self.MP_eq == 1:
+            MP = self.MP1(P1, L1, L2, f1, f2)
+        elif self.MP_eq == 2:
+            MP = self.MP2(P2, L1, L2, f1, f2)
+        elif self.MP_eq == 5:
+            MP = self.MP5(P5, L1, L2, f1, f2, f5)
+        else:
+            MP = self.MP1(P1, L1, L2, f1, f2)
 
         # Ambiguities
         navg = np.sum(MP)/len(MP)
         MP = MP - navg
 
-        return MP
+        return MP  # , out_codes
 
-    def MP1(self, P, L1, L2, f1, f2):
+    def MP1(self, P1, L1, L2, f1, f2):
+        """Return Multipath equation for the first frequency."""
+        MP1 = P1 - L1 - ((2*f2**2)/(f1**2 - f2**2))*(L1-L2)
+        return MP1
 
-        '''
-        
-        Return Multipath equation for the first frequency
+    def MP2(self, P2, L1, L2, f1, f2):
+        """Return Multipath equation for the second frequency."""
+        MP2 = P2 - L2 - ((2*f1**2)/(f2**2 - f1**2))*(L2-L1)
+        return MP2
 
-        '''
-        
-        MP = P - (f1**2 + f2**2)/(f1**2 - f2**2)*L1 + (2*(f2**2))/(f1**2 - f2**2)*L2
-        return MP
+    def MP5(self, P5, L1, L2, f1, f2, f5):
+        """Return Multipath equation for the frequency band 5."""
+        MP5 = P5 - L1 - \
+            (f2**2*(f1**2 + f5**2))/(f5**2*(f1**2 - f2**2))*(L1 - L2)
+        return MP5
 
-    def select_default_observables_MP1(self, obs):
+    def select_default_observables_MP1(self, obs, const_def):
+        """
+        Set default values for the P1, P2, P5, L1 and L2 observables.
 
-        '''
-
-        Set default values for the P1, L1 and L2 observables.
-        The default values are C1C, L1C, L2C. 
-        If these are not available (they are NaN or not included), 
+        The default values are C1C, L1C, L2C.
+        If these are not available (they are NaN or not included),
         use the first available element.
         If P1, L1, or L2 cannot be set at all, don't calculate it and skip sat
 
         Input:
         obs: the loaded observation file
+        const_def: default obs types for the given constellation
 
         Outputs:
         P1: L1 pseudorange
         L1: L1 carrier phase
         L2: L2 carrier phase
 
-        '''
-
+        """
         # Find non-nan data variables
-        obsNNan_names  = [var for var in obs.data_vars if not np.isnan(obs.data_vars[var].values).all()]
+        obsNNan_names = [var for var in obs.data_vars
+                         if not np.isnan(obs.data_vars[var].values).all()]
 
         # Get all observable types in separate sets
-        P1_all = [var for var in obsNNan_names if var[0:2] == 'C1']
-        L1_all = [var for var in obsNNan_names if var[0:2] == 'L1']
-        L2_all = [var for var in obsNNan_names if var[0:2] == 'L2']
+        P1_all = [var for var in obsNNan_names
+                  if var[0:2] == const_def[0][0:2]]
+        P2_all = [var for var in obsNNan_names
+                  if var[0:2] == const_def[1][0:2]]
+        P5_all = [var for var in obsNNan_names
+                  if var[0:2] == const_def[2][0:2]]
+        L1_all = [var for var in obsNNan_names
+                  if var[0:2] == const_def[3][0:2]]
+        L2_all = [var for var in obsNNan_names
+                  if var[0:2] == const_def[4][0:2]]
 
-        # Make a check if the '_all' sets above are empty. 
-        # If even 1 of them is empty, skip satellite (don't calculate MP for it)
-        if P1_all == [] or L1_all == [] or L2_all == []:
-            return None
+        # Make a check if the '_all' sets above are empty.
+        # If even 1 of them is empty, skip satellite, don't calculate MP for it
+        if self.MP_eq == 1:
+            if P1_all == [] or L1_all == [] or L2_all == []:
+                return None
+        elif self.MP_eq == 2:
+            if P2_all == [] or L1_all == [] or L2_all == []:
+                return None
+        elif self.MP_eq == 5:
+            if P5_all == [] or L1_all == [] or L2_all == []:
+                return None
 
-        # Specify default P1, L1 and L2 (will also need to add a condition if the '_all' sets above are empty)
-        if 'C1C' in P1_all:
-            P1 = obs.C1C  # If C1C is available, use it
+        # Specify default P1, P2, P5, L1 and L2
+        # (will also need to add condition if the '_all' sets above are empty)
+        if const_def[0] in P1_all:
+            P1 = obs[const_def[0]]  # If C1C is available, use it
         else:
-            P1 = obs[P1_all[0]]  # Otherwise select the first element of the pseudorange set
+            P1 = obs[P1_all[0]]  # Else select first element of pseudorange set
 
-        if 'L1C' in L1_all:
-            L1 = obs.L1C  # If L1C is available, use it
+        if const_def[1] in P1_all:
+            P2 = obs[const_def[1]]  # If C1C is available, use it
         else:
-            L1 = obs[L1_all[0]]  # Otherwise select the first element of the L1 set
+            P2 = obs[P1_all[0]]  # Else select first element of pseudorange set
 
-        if 'L2C' in L2_all:
-            L2 = obs.L2C  # If L2C is available, use it
+        if const_def[2] in P1_all:
+            P5 = obs[const_def[2]]  # If C1C is available, use it
         else:
-            L2 = obs[L2_all[0]]  # Otherwise select the first element of the L2 set
+            P5 = obs[P1_all[0]]  # Else select first element of pseudorange set
 
-        return [P1, L1, L2]
+        if const_def[3] in L1_all:
+            L1 = obs[const_def[3]]  # If L1C is available, use it
+        else:
+            L1 = obs[L1_all[0]]  # Else select first element of L1 set
+
+        if const_def[4] in L2_all:
+            L2 = obs[const_def[4]]  # If L2C is available, use it
+        else:
+            L2 = obs[L2_all[0]]  # Else select first element of L2 set
+
+        return [P1, P2, P5, L1, L2]
+
+    def get_GLONASS_freq_slot(self, sv, hdr):
+        """
+        Get Glonass frequency slots (k) depending on the satellite.
+
+        Input:
+            sv: chosen satellite vehicle
+            hdr: Rinex 3 header file
+        Output:
+            slot_nr: frequency slot (k value) for Glonass frequencies
+
+        """
+        # Find the glonass slot properties in the header file,
+        # and split the string to make a list. Start reading from idx1
+        slot = hdr['GLONASS SLOT / FRQ #'].split()[1:]
+        # Separate the data list into satellites ('R01', 'R02', 'R03'...etc)
+        # and slot frequencies (k values)
+        glonass_sv = slot[::2]
+        glonass_slot = slot[1::2]
+        # Predetermine return variable
+        slot_nr = 0
+
+        for i in range(0, len(glonass_sv)):
+            if glonass_sv[i] == sv:
+                # Set the return variable to the match, converting it to int
+                slot_nr = int(glonass_slot[i])
+                return slot_nr
+
+    def get_const_data_vars(self, sv):
+        """
+        Get data variables depending on the chosen sat constellation.
+
+        P1, P2, P5, L1 and L2
+        (G/R/E/C etc. or M for mixed)
+
+        Input:
+            sv: chosen satellite vehicle
+        Output:
+            const_def: default constellation observation types
+            freq: frequencies specific
+
+        """
+        const_def = []
+        freq = []
+        if self.const == 'G':
+            const_def = ['C1C', 'C2C', 'C5I', 'L1C', 'L2C']
+            freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
+        elif self.const == 'R':
+            const_def = ['C1C', 'C2C', 'C3I', 'L1C', 'L2C']
+            # k: frequency slot for Glonass, used if self.const = 'R'
+            k = self.get_GLONASS_freq_slot(sv, self.hdr)
+            f1 = (1602 + (k*9/16))
+            f2 = (1246 + (k*7/16))
+            f3 = 1202.025
+            freq = [f1, f2, f3]
+        elif self.const == 'E':
+            const_def = ['C1A', 'C8I', 'C6A', 'L1C', 'L8I']
+            freq = [1575.42, 1191.795, 1278.75]  # E1,E5,E6 for Galileo(no L2)
+        elif self.const == 'C':
+            const_def = ['C2I', 'C7I', 'C6I', 'L2I', 'L7I']
+            freq = [1561.098, 1207.14, 1268.52]  # B1, B2, B3 for BeiDou
+        else:
+            # Placeholder: a case for mixed should be added
+            const_def = ['C1C', 'C2C', 'C5I', 'L1C', 'L2C']
+            freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
+
+        return const_def, freq
 
     def plot_all_MP(self, sv, MP):
-
-        '''
+        """
         Use the result of 'append_MP_arrays' function to plot multipath.
 
         Inputs:
@@ -231,23 +360,15 @@ class Multipath:
         MP: output from the 'append_MP_arrays' function
 
         Output:
-        No output, the function uses the command 'ax.plot()' as many times as there are satellites
+        No output, the function uses the command 'ax.plot()',
+        as many times as there are satellites
 
-        '''
-
+        """
         ax = figure(figsize=(10, 6)).gca()
         for i in range(0, len(sv)):
             ax.plot(MP[i], label=sv[i])
         ax.grid()
         ax.legend()
         plt.xlabel('Time')
-        plt.ylabel('MP1 [meters]')
+        plt.ylabel('MP' + str(self.MP_eq) + ' [meters]')
         show()
-
-# 
-# Testing code (comment out rinex file loading after first time, as it takes a long time to load)
-# obs = gr.load(
-#    '../tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
-#    tlim=['2021-11-03T11:32', '2021-11-03T12:32'])
-# mptest = Multipath(obs)
-# MP = mptest.get_MP()
