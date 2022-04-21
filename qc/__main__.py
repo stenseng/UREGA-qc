@@ -58,22 +58,31 @@ else:
     logging.basicConfig(level=logLevel,
                         format="%(asctime)s;%(levelname)s;%(message)s")
 
-# Load obs file - used for multipath
-#obs = gr.load(
-#    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
-#    tlim=['2021-11-03T10:32', '2021-11-03T11:32'])
-
-# Load rinex 3 header
-#hdr = gr.rinexheader(
-#    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx')
-
+#%%
+# Load obs file and header (RINEX 3) - used for multipath
+obs = gr.load(
+    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
+    tlim=['2021-11-03T10:32', '2021-11-03T11:32'])
+hdr = gr.rinexheader(
+    'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx')
+rnx_version = 3
+#%%
+# Load obs file and header (RINEX 2)
+obs = gr.load("tests/test_data/Rinex2/klsq3070.21o", fast=False, tlim=['2021-11-03T12:00:15', '2021-11-03T13:00:15'])
+hdr = gr.rinexheader("tests/test_data/Rinex2/klsq3070.21o")
+rnx_version = 2
+#%%
 # Call multipath object
-MP_eq=2
-codes = ['C1C', 'C2C', 'C5I', 'L1C', 'L2W']  # GPS test
+MP_eq = 1
+# codes = ['C1C', 'C2C', 'C5I', 'L1C', 'L2W']  # GPS test
 # codes = ['C1P', 'C2C', 'C3I', 'L1C', 'L2C']  # GLONASS test
 # codes = ['C1A', 'C8Q', 'C6A', 'L1C', 'L8I']  # Galileo test
 # codes = ['C2X', 'C7I', 'C6I', 'L2I', 'L7I']  # BeiDou test
-mptest = Multipath(obs, hdr, 'G', MP_eq=MP_eq, codes=codes) # 'G'/'R'/'E'/'C' ('M' coming soon)
+# codes = ['C1', 'C2', 'C5', 'L1', 'L2']  # GPS/GLONASS test (rnx2)
+codes = ['C1', 'C8', 'C6', 'L1', 'L8']  # Galileo test (rnx2)
+mptest = Multipath(obs, hdr, 'E', MP_eq=MP_eq, codes=codes, rnx_version=rnx_version) # 'G'/'R'/'E'/'C' ('M' coming soon)
 # Use function get_MP to get MP1 (more coming soon)
 # , info
 MP = mptest.get_MP()
+
+# check result for same time window in rnx2
