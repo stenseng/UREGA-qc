@@ -6,6 +6,11 @@ Created on Mon Apr  4 13:09:57 2022
 """
 import numpy as np
 import math
+import conversion as ccn
+
+c = 299792458.0  # [m/s]
+mu = 3.986005e14  # [m^3/s^2]
+Omegadot_Earth = 7.2921151467e-5  # [rad/s]
 
 
 class Eph:
@@ -34,6 +39,11 @@ class Eph:
         self.Cic = []
         self.Crs = []
         self.Crc = []
+        # Debugging
+        self.x = []
+        self.y = []
+        self.z = []
+        self.elevation = []
 
     def __newton(self, f, Df, M, e):
         x0 = 0.01
@@ -63,9 +73,18 @@ class Eph:
     def __trueAnomaly(self, __newton, __MtoE, __dfMtoE, M, e):
         E = self.__newton(self.__MtoE, self.__dfMtoE, M, e)
         theta = 2 * math.atan(math.sqrt((1 + e) /
-                                        (1 - e)) *
-                              math.tan(E / 2))
+                                        (1 - e)) * math.tan(E / 2))
         return theta
+
+    def weekSeconds(self, t):
+        leapSeconds = 18  # As of 2022
+        secInWeek = 604800
+        epoch_ref_GPS = np.datetime64('1980-01-06T00:00:00')
+        epoch = np.datetime64(t)
+        time_diff = epoch - epoch_ref_GPS + np.timedelta64(leapSeconds, 's')
+        # Given in [ns]
+        weekSeconds = float(time_diff*1e-9) % secInWeek
+        return weekSeconds
 
     def addNav(
         self,
@@ -120,9 +139,9 @@ class Eph:
         self.Crs.append(Crs)
         self.Crc.append(Crc)
 
-    def getEphXYZ(
+    def getXYZ(
         self,
-        t_obs,
+        t,
         P1,
         toe,
         toc,
@@ -145,11 +164,59 @@ class Eph:
         Crs,
         Crc
     ):
-        x = P1*t_obs
+        # for t in self.toe:
+        t_week = self.weekSeconds(t)
+        t_k = t_week - toe
+        # - P1/c
+        n0 = math.sqrt(mu / a**3)
+        n = n0 + deltaN
+        M_corr = M + n * t_k
+        E_corr = self.__newton(self.__MtoE,
+                               self.__dfMtoE,
+                               M_corr,
+                               e)
+        theta_corr = self.__trueAnomaly(self.__newton,
+                                        self.__MtoE,
+                                        self.__dfMtoE,
+                                        M_corr,
+                                        e)
+        phi = theta_corr + omega
+        # Second Harmonic Perturbations
+        delta_u = Cus * math.sin(2 * phi) + Cuc * math.cos(2 * phi)
+        delta_r = Crs * math.sin(2 * phi) + Crc * math.cos(2 * phi)
+        delta_i = Cis * math.sin(2 * phi) + Cic * math.cos(2 * phi)
+        u = phi + delta_u
+        r = a * (1 - e * math.cos(E_corr)) + delta_r
+        i_corr = i + t_k * idot + delta_i
+        # Position in orbital plane
+        x_plane = r * math.cos(u)
+        y_plane = r * math.sin(u)
 
-        y = 1.0
+        Omega_corr = Omega + (Omegadot - Omegadot_Earth) * t_k - \
+            Omegadot_Earth * toe
 
-        z = 2.0
+        x = (x_plane * math.cos(Omega_corr)
+             - y_plane * math.cos(i_corr) * math.sin(Omega_corr))
+
+        y = (x_plane * math.sin(Omega_corr)
+             + y_plane * math.cos(i_corr) * math.cos(Omega_corr))
+
+        z = (y_plane * math.sin(i_corr))
+
         return (x, y, z)
+
+    def getElevation(
+        self,
+        x,
+        y,
+        z,
+        receiver_pos
+    ):
+        rec_sat_enu_ccn = ccn.cart2enu(np.array([x, y, z]).T,
+                                       np.array(receiver_pos))
+        ead = ccn.enu2ead(rec_sat_enu_ccn)
+        elevation = ead[:, 0] / np.pi * 180
+        return elevation
+
 
 # (x, y, z) = eph["G15"].getXYZ(34592.2)
