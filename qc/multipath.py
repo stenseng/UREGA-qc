@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-@author: Lars Stenseng.
+Multipath class.
 
-@mail: lars@stenseng.net
+    Using RINEX version 2 or 3 files, calculates multipath equations
+    with frequency band 1, 2 or 5 and plots results against time.
+    Also allows for specifying constellation type and observation codes.
+
+Author: Magdalena Golofit
+02/05/2022
 """
 
 import numpy as np
@@ -15,7 +20,13 @@ import matplotlib.pyplot as plt
 class Multipath:
     """The class containing functions for computing various MP equations."""
 
-    def __init__(self, obs, hdr, const: str, MP_eq=1, codes=None, rnx_version = 3):
+    def __init__(self,
+                 obs,
+                 hdr,
+                 const: str,
+                 MP_eq=1,
+                 codes=None,
+                 rnx_version=3):
         self.obs = obs
         self.hdr = hdr
         self.const = const  # Constellation type (G/R/E/C). Mixed coming soon
@@ -44,9 +55,9 @@ class Multipath:
         obs: the loaded observation file
 
         Outputs:
-        7 lists of satellite numbers that were included in the loaded obs file
-        G-GPS, R-GLONASS, E-Galileo, C-BeiDou, S-SBAS, J-QZSS, I-IRNSS
-
+        1 or 4 lists of satellite numbers that were included in the obs file
+        G-GPS, R-GLONASS, E-Galileo, C-BeiDou
+        Returns 4 list when using the mixed ('M') option.
         """
         # Case: G (GPS)
         if self.const == 'G':
@@ -112,39 +123,59 @@ class Multipath:
         Used when we want MP results for many satellites in one variable.
 
         Inputs:
-        sv: a list of GPS satellites that appear in the loaded RINEX file
         obs: the loaded observation file
 
         Output:
         An array of appended MP values for many satellites
-        which makes it easy to store/plot results
 
         """
-        sv = self.sort_sat_types(self.obs)
-        # info = []
-        MP = []
-        sv_legend = []
-        print(len(sv))
-        for i in range(0, len(sv)):
-            # , obs_codes
-            MP1 = self.calculate_MP(obs, sv[i])
-            if MP1 is None:
-                continue
-            else:
-                MP.append(MP1)
-                # info.append([sv[i], obs_codes])
-                sv_legend.append(sv[i])
-        # info,
-        return MP, sv_legend
+        if not self.const == 'M':
+            sv = self.sort_sat_types(self.obs)
+            MP = []
+            # MP = [[]]
+            sv_legend = []
+
+            for i in range(0, len(sv)):
+                MP1 = self.calculate_MP(obs, sv[i])
+                if MP1 is None:
+                    continue
+                else:
+                    # Returning a numpy array
+                    # MP.append([sv[i], obs_codes, MP1.time.values,
+                    #        MP1.values[:]])
+                    # Return an xarray separately later
+                    MP.append(MP1)
+                    sv_legend.append(sv[i])
+            # return np.array(MP, dtype=object), sv_legend
+            return MP, sv_legend
+        else:
+            MP_all = [[], [], [], []]
+            # MPG = []
+            # MPR = []
+            # MPE = []
+            # MPC = []
+            # obs_codes_all = [[], [], [], []]
+            sv_legend_all = [[], [], [], []]
+            sv_all = self.sort_sat_types(self.obs)
+            # obs_codes = [[], [], [], []]
+            print(sv_all)
+            for i in range(0, 4):  # Four arrays (svG, svR, svE, svC)
+                for j in range(0, len(sv_all[i])):
+                    MP1 = self.calculate_MP(obs, sv_all[i][j])
+                    if MP1 is None:
+                        continue
+                    else:
+                        MP_all[i].append(MP1)
+                        sv_legend_all[i].append(sv_all[i][j])
+            return MP_all, sv_legend_all
 
     def calculate_MP(self, obs, sv):
         """
-        Calculate code multipath for chosen constellation and MP frequency
+        Calculate code multipath for chosen constellation and MP frequency.
 
         Inputs:
         obs: the loaded observation file
         sv: chosen satellite vehicle
-        const: constellation type for getting proper obs types (G/R/E/C)
 
         Output:
         MP1 value
@@ -154,12 +185,12 @@ class Multipath:
         # Get default obs types and frequencies for chosen constellation.
         # Different function based on rnx version
         if self.rnx_version == 3:
-            const_def, freq = self.get_const_data_vars(sv)  
+            const_def, freq = self.get_const_data_vars(sv)
             f5 = freq[2]*1e6
         else:
             const_def, freq = self.get_const_data_vars_rnx2(sv)
             # GLONASS doesn't have f5 frequency in rinex 2
-            if not self.const == 'R':
+            if not sv[0] == 'R':
                 f5 = freq[2]*1e6
 
         f1 = freq[0]*1e6
@@ -169,10 +200,10 @@ class Multipath:
 
         if self.codes is None:
             obs_codes = self.select_default_observables_MP1(obs, const_def)
-        #  out_codes = const_def
+            # out_codes = const_def
         else:
             obs_codes = self.select_default_observables_MP1(obs, self.codes)
-        #    out_codes = self.codes
+            # out_codes = self.codes
 
         if obs_codes is None:
             return None
@@ -192,12 +223,12 @@ class Multipath:
             MP = self.MP2(P2, L1, L2, f1, f2)
         elif self.MP_eq == 5:
             MP = self.MP5(P5, L1, L2, f1, f2, f5)
-        else:
+        else:  # Default MP 1
             MP = self.MP1(P1, L1, L2, f1, f2)
 
         # Ambiguities
-        navg = np.sum(MP)/len(MP)
-        MP = MP - navg
+        # navg = np.sum(MP)/len(MP)
+        # MP = MP - navg
 
         return MP  # , out_codes
 
@@ -239,7 +270,7 @@ class Multipath:
         # Find non-nan data variables
         obsNNan_names = [var for var in obs.data_vars
                          if not np.isnan(obs.data_vars[var].values).all()]
-        
+
         # Get all observable types in separate sets
         if self.rnx_version == '3':
             P1_all = [var for var in obsNNan_names
@@ -247,7 +278,7 @@ class Multipath:
             P2_all = [var for var in obsNNan_names
                       if var[0:2] == const_def[1][0:2]]
         else:
-        # Rinex2 pseudoranges are described as C1 or P1 etc.
+            # Rinex2 pseudoranges are described as C1 or P1 etc.
             P1_all = [var for var in obsNNan_names
                       if var[0:2] == const_def[0][0:2] or
                       var[0:2] == 'P1']
@@ -285,13 +316,14 @@ class Multipath:
         else:
             P2 = obs[P1_all[0]]  # Else select first element of pseudorange set
 
-        if self.rnx_version == 3 or (self.rnx_version == 2 and not self.const == 'R'):
+        if self.rnx_version == 3 or (
+                self.rnx_version == 2 and not self.const == 'R'):
             if const_def[2] in P5_all:
                 P5 = obs[const_def[2]]  # If C1C is available, use it
             else:
-                P5 = obs[P1_all[0]]  # Else select first element of pseudorange set
+                P5 = obs[P1_all[0]]  # Else select first element of pseudorange
         else:
-        # Can't return without P5 - so set it to P1
+            # Can't return without P5 - so set it to P1
             P5 = obs[P1_all[0]]  # (but it will never be used anywhere)
 
         if const_def[3] in L1_all:
@@ -350,7 +382,6 @@ class Multipath:
         Output:
             slot_nr: frequency slot (k value) for Glonass frequencies
         """
-
         # Pre-determined frequency slots and their corresponding satellites
         slots = np.array([['R01', 'R02', 'R03', 'R04', 'R05', 'R06', 'R07',
                            'R08', 'R09', 'R10', 'R12', 'R13', 'R14',
@@ -401,9 +432,23 @@ class Multipath:
             const_def = ['C2I', 'C7I', 'C6I', 'L2I', 'L7I']
             freq = [1561.098, 1207.14, 1268.52]  # B1, B2, B3 for BeiDou
         else:
-            # Placeholder: a case for mixed should be added
-            const_def = ['C1C', 'C2C', 'C5I', 'L1C', 'L2C']
-            freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
+            if sv[0] == 'G':
+                const_def = ['C1C', 'C2C', 'C5I', 'L1C', 'L2C']
+                freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
+            elif sv[0] == 'R':
+                const_def = ['C1C', 'C2C', 'C3I', 'L1C', 'L2C']
+                # k: frequency slot for Glonass, used if self.const = 'R'
+                k = self.get_GLONASS_freq_slot(sv)
+                f1 = (1602 + (k*9/16))
+                f2 = (1246 + (k*7/16))
+                f3 = 1202.025
+                freq = [f1, f2, f3]
+            elif sv[0] == 'E':
+                const_def = ['C1A', 'C8I', 'C6A', 'L1C', 'L8I']
+                freq = [1575.42, 1191.795, 1278.75]  # E1,E5,E6 for Galileo
+            elif sv[0] == 'C':
+                const_def = ['C2I', 'C7I', 'C6I', 'L2I', 'L7I']
+                freq = [1561.098, 1207.14, 1268.52]  # B1, B2, B3 for BeiDou
 
         return const_def, freq
 
@@ -447,9 +492,21 @@ class Multipath:
         # if self.const == 'C':
         #    throw exception ? (invalid input)
         else:
-            # Placeholder: a case for mixed should be added
-            const_def = ['C1', 'C2', 'C5', 'L1', 'L2']
-            freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
+            if sv[0] == 'G':
+                const_def = ['C1', 'C2', 'C5', 'L1', 'L2']
+                freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
+            elif sv[0] == 'R':
+                # C3 is not valid but is here to keep array size same as others
+                const_def = ['C1', 'C2', 'C3', 'L1', 'L2']
+                # k: frequency slot for Glonass, used if self.const = 'R'
+                k = self.get_GLONASS_freq_slot_rnx2(sv)
+                f1 = (1602 + (k*9/16))
+                f2 = (1246 + (k*7/16))
+                # f3 = 1202.025  # This option does not exist for RINEX 2
+                freq = [f1, f2]
+            elif sv[0] == 'E':
+                const_def = ['C1', 'C8', 'C6', 'L1', 'L8']
+                freq = [1575.42, 1191.795, 1278.75]  # E1,E5,E6 for Galileo
 
         return const_def, freq
 
@@ -466,11 +523,32 @@ class Multipath:
         as many times as there are satellites
 
         """
-        ax = figure(figsize=(10, 6)).gca()
-        for i in range(0, len(sv)):
-            ax.plot(MP[i], label=sv[i])
-        ax.grid()
-        ax.legend()
-        plt.xlabel('Time')
-        plt.ylabel('MP' + str(self.MP_eq) + ' [meters]')
-        show()
+        titles = ['GPS', 'GLONASS', 'Galileo', 'BeiDou']
+        const_options = ['G', 'R', 'E', 'C']
+        if not self.const == 'M':
+            ax = figure(figsize=(10, 6)).gca()
+            for i in range(0, len(sv)):
+                ax.plot(MP[i], label=sv[i])
+            ax.grid()
+            ax.legend()
+            plt.xlabel('Time [epochs]')
+            plt.ylabel('MP' + str(self.MP_eq) + ' [meters]')
+            title = titles[const_options.index(self.const)]
+            plt.title(title)
+            show()
+        else:
+            if self.rnx_version == 2:
+                loop_range = 3  # Not plotting BeiDou (doesn't exist)
+            else:
+                loop_range = 4  # Plot all for rnx 3
+
+            for i in range(0, loop_range):
+                ax = figure(figsize=(10, 6)).gca()
+                for j in range(0, len(sv[i])):
+                    ax.plot(MP[i][j], label=sv[i][j])
+                ax.grid()
+                ax.legend()
+                plt.title(titles[i])
+                plt.xlabel('Time [epochs]')
+                plt.ylabel('MP' + str(self.MP_eq) + ' [meters]')
+                show()
