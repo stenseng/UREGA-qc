@@ -13,6 +13,7 @@ from sys import exit
 import georinex as gr
 from matplotlib.pyplot import figure, show
 import numpy as np
+import matplotlib.pyplot as plt
 
 from qc.multipath import Multipath
 # from qc.qc import qc
@@ -64,47 +65,37 @@ else:
 # Load obs file and header (RINEX 3) - used for multipath
 obs = gr.load(
     'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
-    tlim=['2021-11-03T12:15', '2021-11-03T13:15'])
-# '2021-11-03T10:32', '2021-11-03T11:32'
+    tlim=['2021-11-03T12:00', '2021-11-03T12:30'])
 hdr = gr.rinexheader(
     'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx')
 rnx_version = 3
+
 # %%
 # Load obs file and header (RINEX 2)
 obs = gr.load("tests/test_data/Rinex2/klsq3070.21o", fast=False,
-              tlim=['2021-11-03T12:00:15', '2021-11-03T13:00:15'])
+              tlim=['2021-11-03T12:00:00', '2021-11-03T13:00:30'])
 hdr = gr.rinexheader("tests/test_data/Rinex2/klsq3070.21o")
 rnx_version = 2
-# %%
+
+# %% Using Multipath class
 
 MP_eq = 1  # Select MP equation 1/2/5
 
-# Select observation codes: (rnx3/rnx2)
-# codes = ['C1C', 'C2C', 'C5I', 'L1C', 'L2W']  # GPS test
-# codes = ['C1P', 'C2C', 'C3I', 'L1C', 'L2C']  # GLONASS test
-# codes = ['C1A', 'C8Q', 'C6A', 'L1C', 'L8I']  # Galileo test
-# codes = ['C2X', 'C7I', 'C6I', 'L2I', 'L7I']  # BeiDou test
+# Select observation codes: (rnx3/rnx2 examples)
+codes = ['C1C', 'C2C', 'C5I', 'L1C', 'L2W']  # GPS test (rnx3)
+# codes = ['C1P', 'C2C', 'C3I', 'L1C', 'L2C']  # GLONASS test (rnx3)
+# codes = ['C1A', 'C8Q', 'C6A', 'L1C', 'L8I']  # Galileo test (rnx2)
+# codes = ['C2X', 'C7I', 'C6I', 'L2I', 'L7I']  # BeiDou test (rnx3)
 # codes = ['C1', 'C2', 'C5', 'L1', 'L2']  # GPS/GLONASS test (rnx2)
 # codes = ['C1', 'C8', 'C6', 'L1', 'L8']  # Galileo test (rnx2)
 
-# Call multipath object'
-# Select constellation 'G'/'R'/'E'/'C' ('M' coming soon)
+# Call multipath object
 mp = Multipath(obs,  # Observation file
                hdr,  # Header (from obs)
-               'M',  # Constellation
+               'G',  # Constellation G/R/E/C/M
                MP_eq=MP_eq,  # MP equation
-               # codes=codes,  # Observation codes (don't use for Mixed)
+               codes=codes,  # Observation codes (don't use for Mixed!)
                rnx_version=rnx_version)  # Rinex version
 
 # Use function get_MP to get MP1
 MP = mp.get_MP()
-
-# %% Plot pseudoranges
-svs = mp.sort_sat_types(obs)
-ax = figure(figsize=(10, 6)).gca()
-for i in range(0, np.size(svs)):
-    obstest = obs.sel(sv=svs[i]).dropna(dim='time', how='all')
-    ax.plot(obstest.C1C, label=obs.coords['sv'].values[i])
-ax.grid()
-ax.legend()
-show()
