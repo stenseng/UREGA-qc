@@ -13,6 +13,7 @@ import numpy as np
 from matplotlib.pyplot import figure, show
 import matplotlib.pyplot as plt
 
+# %%
 obs = gr.load(
     'tests/test_data/Rinex3/KLSQ00GRL_R_20213070000_01D_15S_MO.rnx',
     # tlim=['2021-11-03T12:00', '2021-11-03T12:30'])
@@ -26,6 +27,9 @@ obs = gr.load(
 # %% Test with self-collected data which is sure to contain large slips
 obs = gr.load('../../survey_data/SEPT0622.22O')
 
+# %% Testing with NASA data
+obs = gr.load('../../survey_data/ABMF00GLP_R_20160010000_01D_30S_MO.rnx',
+              tlim=['2016-01-01T05:30', '2016-01-01T07:30'])
 # %%  Starting test
 
 # Copying helper functions from Multipath class - later on, it could be turned
@@ -112,8 +116,13 @@ show()
 # freq = [f1, f2, f3]
 # %%
 # Plot separate sats, L1 and L2
+# ['C11', 'E22', 'G01', 'G03', 'G06', 'G07', 'G08', 'G09', 'G11', 'G16',
+#       'G17', 'G19', 'G23', 'G27', 'G28', 'G30', 'G32', 'R04', 'R05', 'R06',
+#       'R09', 'R10', 'R11', 'R15', 'R16', 'R18', 'R19', 'R20', 'R21', 'S20',
+#       'S33', 'S35', 'S38']
+
 ax = figure(figsize=(10, 6)).gca()
-test = obs.sel(sv='G14').dropna(dim='time', how='all')
+test = obs.sel(sv='G07').dropna(dim='time', how='all')
 L1test = test['L1C']
 L2test = test['L2W']
 C1test = test['C1C']
@@ -130,7 +139,7 @@ show()
 
 # %% Detecting and noting location of loss-of-locks
 # satnr = 'G13'
-satnr = 'G14'
+satnr = 'R09'
 test = obs.sel(sv=satnr).dropna(dim='time', how='all')
 L1test = test['L1C']
 L2test = test['L2W']
@@ -197,6 +206,9 @@ show()
 
 # %% Testing noisy dataset (geometry-free combination) returning
 # small and big cycle slips and loss of lock timestamps
+obs_noise = obs.sel(sv='G09').dropna(dim='time', how='all')
+L1test = obs_noise['L1C']
+L2test = obs_noise['L2W']
 
 I_max = 0.4  # Maximal ionospheric delay [m/h]
 k_1 = 3  # criterion factor
