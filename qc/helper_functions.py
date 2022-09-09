@@ -25,7 +25,7 @@ class helper_functions:
 
     """
 
-    def sort_sat_types(self, obs):
+    def sort_sat_types(self, obs, constellation):
         """
         Create lists for each satellite constellation type.
 
@@ -49,7 +49,7 @@ class helper_functions:
 
         """
         # Case: G (GPS)
-        if self.constellation == 'G':
+        if constellation == 'G':
             svG = []
             for i in range(0, len(obs.sv)):
                 if str(obs.sv[i].values)[0] == 'G':
@@ -58,7 +58,7 @@ class helper_functions:
                     continue
             return svG
         # Case: R (GLONASS)
-        elif self.constellation == 'R':
+        elif constellation == 'R':
             svR = []
             for i in range(0, len(obs.sv)):
                 if str(obs.sv[i].values)[0] == 'R':
@@ -67,7 +67,7 @@ class helper_functions:
                     continue
             return svR
         # Case: E (Galileo)
-        elif self.constellation == 'E':
+        elif constellation == 'E':
             svE = []
             for i in range(0, len(obs.sv)):
                 if str(obs.sv[i].values)[0] == 'E':
@@ -76,7 +76,7 @@ class helper_functions:
                     continue
             return svE
         # Case: C (BeiDou)
-        elif self.constellation == 'C':
+        elif constellation == 'C':
             svC = []
             for i in range(0, len(obs.sv)):
                 if str(obs.sv[i].values)[0] == 'C':
@@ -105,7 +105,7 @@ class helper_functions:
                     continue  # Skip satellites that don't match any category
             return svG, svR, svE, svC
 
-    def get_const_data_vars(self, sv):
+    def get_const_data_vars(self, sv, constellation):
         """
         Get data variables depending on the chosen sat constellation.
 
@@ -125,10 +125,10 @@ class helper_functions:
         """
         const_def = []
         freq = []
-        if self.constellation == 'G':
+        if constellation == 'G':
             const_def = ['C1C', 'C2C', 'C5I', 'L1C', 'L2C']
             freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
-        elif self.constellation == 'R':
+        elif constellation == 'R':
             const_def = ['C1C', 'C2C', 'C3I', 'L1C', 'L2C']
             # k: frequency slot for Glonass, used if self.constellation = 'R'
             k = self.__get_GLONASS_freq_slot(sv)
@@ -136,10 +136,10 @@ class helper_functions:
             f2 = (1246 + (k*7/16))
             f3 = 1202.025
             freq = [f1, f2, f3]
-        elif self.constellation == 'E':
+        elif constellation == 'E':
             const_def = ['C1A', 'C8I', 'C6A', 'L1C', 'L8I']
             freq = [1575.42, 1191.795, 1278.75]  # E1,E5,E6 for Galileo(no L2)
-        elif self.constellation == 'C':
+        elif constellation == 'C':
             const_def = ['C2I', 'C7I', 'C6I', 'L2I', 'L7I']
             freq = [1561.098, 1207.14, 1268.52]  # B1, B2, B3 for BeiDou
         else:
@@ -163,7 +163,7 @@ class helper_functions:
 
         return const_def, freq
 
-    def get_const_data_vars_rnx2(self, sv):
+    def get_const_data_vars_rnx2(self, sv, constellation):
         """
         Get data variables depending on the chosen sat constellation.
 
@@ -183,10 +183,10 @@ class helper_functions:
         """
         const_def = []
         freq = []
-        if self.constellation == 'G':
+        if constellation == 'G':
             const_def = ['C1', 'C2', 'C5', 'L1', 'L2']
             freq = [1575.42, 1227.60, 1176.45]  # L1, L2, L5 for GPS
-        elif self.constellation == 'R':
+        elif constellation == 'R':
             # C3 is not valid but is here to keep array size same as others
             const_def = ['C1', 'C2', 'C3', 'L1', 'L2']
             # k: frequency slot for Glonass, used if self.constellation = 'R'
@@ -195,7 +195,7 @@ class helper_functions:
             f2 = (1246 + (k*7/16))
             # f3 = 1202.025  # This option does not exist for RINEX 2
             freq = [f1, f2]
-        elif self.constellation == 'E':
+        elif constellation == 'E':
             const_def = ['C1', 'C8', 'C6', 'L1', 'L8']
             freq = [1575.42, 1191.795, 1278.75]  # E1,E5,E6 for Galileo(no L2)
         else:

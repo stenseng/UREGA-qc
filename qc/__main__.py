@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 from qc.multipath import Multipath
 # from qc.qc import qc
 # from qc.slips import slips
+from qc.helper_functions import helper_functions
 
 
 def procSigint(signum, frame):

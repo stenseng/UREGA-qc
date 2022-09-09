@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import pandas as pd
 import matplotlib.dates as mdates
-
+from qc.helper_functions import helper_functions as hf
 
 class Multipath:
     """
@@ -104,6 +104,7 @@ class Multipath:
 
         return self.MP
 
+    '''
     def __sort_sat_types(self, obs):
         """
         Create lists for each satellite constellation type.
@@ -183,6 +184,7 @@ class Multipath:
                 else:
                     continue  # Skip satellites that don't match any category
             return svG, svR, svE, svC
+        '''
 
     def __append_MP_arrays(self, obs):
         """
@@ -207,7 +209,8 @@ class Multipath:
 
         """
         if not self.constellation == 'M':
-            sv = self.__sort_sat_types(self.obs)
+            # sv = self.__sort_sat_types(self.obs)
+            sv = hf().sort_sat_types(self.obs, self.constellation)
             MP = []
             sv_legend = []
             for i in range(0, len(sv)):
@@ -223,7 +226,8 @@ class Multipath:
         else:
             MP_all = [[], [], [], []]
             sv_legend_all = [[], [], [], []]
-            sv_all = self.__sort_sat_types(self.obs)
+            # sv_all = self.__sort_sat_types(self.obs)
+            sv_all = hf().sort_sat_types(self.obs, self.constellation)
             for i in range(0, 4):  # Four arrays (svG, svR, svE, svC)
                 for j in range(0, len(sv_all[i])):
                     MP1, out_codes = self.__calculate_MP(obs, sv_all[i][j])
@@ -258,10 +262,10 @@ class Multipath:
         # Get default obs types and frequencies for chosen constellation.
         # Different function based on rnx version
         if self.rnx_version == 3:
-            const_def, freq = self.__get_const_data_vars(sv)
+            const_def, freq = hf().get_const_data_vars(sv, self.constellation)
             f5 = freq[2]*1e6
         else:
-            const_def, freq = self.__get_const_data_vars_rnx2(sv)
+            const_def, freq = hf().get_const_data_vars_rnx2(sv, self.constellation)
             # GLONASS doesn't have f5 frequency in rinex 2
             if not sv[0] == 'R':
                 f5 = freq[2]*1e6
@@ -478,7 +482,7 @@ class Multipath:
                 # Set the return variable to the match, converting it to int
                 slot_nr = int(slots[1][i])
                 return slot_nr
-
+    '''
     def __get_const_data_vars(self, sv):
         """
         Get data variables depending on the chosen sat constellation.
@@ -590,14 +594,15 @@ class Multipath:
                 freq = [1575.42, 1191.795, 1278.75]  # E1,E5,E6 for Galileo
 
         return const_def, freq
+    '''
 
     def plot_all_MP(self, sv, MP):
         """
         Use the result of 'append_MP_arrays' function to plot multipath.
-        
+
         If only one specifc constellation was selected, return only one plot.
         If the mixed option for constellations was selected, return 4 plots
-        for RINEX 3 version and 3 plots for RINEX 2 version 
+        for RINEX 3 version and 3 plots for RINEX 2 version
         (as RINEX 2 does not include BDS constellation).
 
         Parameters
