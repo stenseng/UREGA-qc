@@ -49,7 +49,7 @@ print(svG)
 
 # 'G01','G06','G08','G10','G12','G14','G17','G19','G21','G22','G24','G30','G32'
 #sat = 'G21'
-sat = 'G05'
+sat = 'G06'
 sattest = obs.sel(sv=sat).dropna(dim='time', how='all')
 # G02 data vars with no-nan: C1C, D1C, L1C, S1C, C1W, C2W, D2W, L2W, S1W, S2W
 
@@ -122,7 +122,7 @@ show()
 #       'S33', 'S35', 'S38']
 
 ax = figure(figsize=(10, 6)).gca()
-test = obs.sel(sv='G07').dropna(dim='time', how='all')
+test = obs.sel(sv='G06').dropna(dim='time', how='all')
 L1test = test['L1C']
 L2test = test['L2W']
 C1test = test['C1C']
@@ -139,7 +139,7 @@ show()
 
 # %% Detecting and noting location of loss-of-locks
 # satnr = 'G13'
-satnr = 'R09'
+satnr = 'G06'
 test = obs.sel(sv=satnr).dropna(dim='time', how='all')
 L1test = test['L1C']
 L2test = test['L2W']
@@ -206,7 +206,7 @@ show()
 
 # %% Testing noisy dataset (geometry-free combination) returning
 # small and big cycle slips and loss of lock timestamps
-obs_noise = obs.sel(sv='G09').dropna(dim='time', how='all')
+obs_noise = obs.sel(sv='G14').dropna(dim='time', how='all')
 L1test = obs_noise['L1C']
 L2test = obs_noise['L2W']
 
@@ -262,9 +262,11 @@ for i in range(1, len(L4)):
         slip_idx = [i, L4[i].values]
 
 # %% Simulating cycle slip in data
+# TESTING FROM HERE -----------------------------
 
+sat = 'G14'
 ax = figure(figsize=(10, 6)).gca()
-test = obs.sel(sv='G13').dropna(dim='time', how='all')
+test = obs.sel(sv='G14').dropna(dim='time', how='all')
 
 L1test = test['L1C']
 L2slip = test['L2W']
@@ -330,7 +332,7 @@ print('Slips:', slips_nr, ', Slip criterion:',  criterion.values)
 # %% Wide-lane Melbourne-Wuebbena testing
 
 # 'G01','G06','G08','G10','G12','G14','G17','G19','G21','G22','G24','G30','G32'
-sat = 'G13'
+#sat = 'G13'
 sattest = obs.sel(sv=sat).dropna(dim='time', how='all')
 # G02 data vars with no-nan: C1C, D1C, L1C, S1C, C1W, C2W, D2W, L2W, S1W, S2W
 
@@ -379,6 +381,13 @@ print('Slips:', slips_nr, ', Slip criterion:',  criterion.values)
 
 # %%  Work in Progress
 
+import numpy as np
+from matplotlib.pyplot import figure, show
+import matplotlib.pyplot as plt
+import xarray as xr
+import pandas as pd
+import matplotlib.dates as mdates
+from qc.helper_functions import helper_functions as hf
 
 class Slips:
     """
@@ -398,10 +407,60 @@ class Slips:
 
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, obs, hdr, constellation, codes, rnx_version):
 
-    def slips_MW_single_freq(self, obs):
+        self.obs = obs
+        self.hdr = hdr
+        self.constellation = str(constellation)
+        self.codes = codes
+        self.rnx_version = rnx_version
+
+    def get_slips(self) -> list:
+
+        self.slips_nr, self.slip_crit = self.__append_slip_arrays(self.obs)
+
+        self.plot_slips(self.obs, self.sv)
+
+        return self.slips_nr
+
+    def __append_slip_arrays(self, obs):
+
+        if not self.constellation == 'M':
+            sv = self.__sort_sat_types(self.obs)
+            # sv = hf().sort_sat_types(self.obs, self.constellation)
+            slips = []
+            slips_nrs = []
+            criterions = []
+            sv_legend = []
+            for i in range(0, len(sv)):
+                L4_diff, slips_nr, criterion, out_codes = self.slips_MW_single_freq(obs, sv[i])
+                if L4_diff is None:
+                    continue
+                else:
+                    # MP.append(xr.DataArray(MP1[:], coords={
+                    #    "sv": MP1[:].sv.values, "time": MP1[:].time.values,
+                    #    "obs_codes": str(out_codes)}))
+                    slips.append(L4_diff[i])  # make this into a xarray like above !
+                    sv_legend.append(sv[i])
+            return slips, sv_legend
+        else:
+            L4_all = [[], [], [], []]
+            sv_legend_all = [[], [], [], []]
+            # sv_all = self.__sort_sat_types(self.obs)
+            sv_all = hf().sort_sat_types(self.obs, self.constellation)
+            for i in range(0, 4):  # Four arrays (svG, svR, svE, svC)
+                for j in range(0, len(sv_all[i])):
+                    L4_diff, slips_nr, out_codes = self.slips_MW_single_freq(obs, sv_all[i][j])
+                    if L4_diff is None:
+                        continue
+                    else:
+                        MP_all[i].append(xr.DataArray(MP1[:], coords={
+                            "sv": MP1[:].sv.values, "time": MP1[:].time.values,
+                            "obs_codes": str(out_codes)}))
+                        sv_legend_all[i].append(sv_all[i][j])
+            return MP_all, sv_legend_all
+
+    def slips_MW_single_freq(self, obs, sv):
         """
         Cycle slip detection algorithm 1.
 
@@ -419,6 +478,7 @@ class Slips:
         None.
 
         """
+        '''
         # Select a list of GPS satellites
         svG = []
         for i in range(0, len(obs.sv)):
@@ -426,34 +486,62 @@ class Slips:
                 svG.append(str(obs.sv[i].values))
             else:
                 continue
-
+        '''
         # Melbourne-Wuebbena parameters (predetermined)
         I_max = 0.4  # Maximal ionospheric delay [m/h]
         k = 4  # criterion factor
 
         # For each tracked satellite
-        for i in range(0, len(svG)):
-            current_sat = obs.sel(sv=svG[i]).dropna(dim='time', how='all')
+        # for i in range(0, len(sv)):
 
-            L1 = current_sat['L1C']
-            L2 = current_sat['L2W']
-            L4 = np.abs(L1 - L2)
+        # Determine rinex version
+        if self.rnx_version == 3:
+            const_def, freq = self.__get_const_data_vars(
+                                            sv,
+                                            self.constellation)
+        else:
+            const_def, freq = hf().get_const_data_vars_rnx2(
+                                            sv,
+                                            self.constellation)
 
-            sigma_L4 = np.std(L4)
+        # Set obs based on sat
+        obs = obs.sel(sv=sv[i]).dropna(dim='time', how='all')
 
-            criterion = k*sigma_L4 + I_max
-            slips_nr = 0
+        # Select default obs codes (L1 and L2)
+        if self.codes is None:
+            obs_codes = self.__select_default_observables(obs, const_def)
+            out_codes = const_def
+        else:
+            obs_codes = self.__select_default_observables(obs, self.codes)
+            out_codes = self.codes
 
-            L4_diff = []
-            for j in range(1, len(L4)):
-                L4_diff.append(np.abs(L4[j] - L4[j-1]))
-                if (np.abs(L4[j] - L4[j-1]) > criterion):
-                    # If satisfied, raise cycle-slip flag
-                    slips_nr = slips_nr + 1
+        if obs_codes is None:
+            return None, None
+        else:
+            L1 = obs_codes[3]
+            L2 = obs_codes[4]
 
-            print('Sat:', svG[i],
-                  ', Slips:', slips_nr,
-                  ', Slip criterion:',  criterion.values)
+        # L1 = current_sat['L1C']
+        # L2 = current_sat['L2W']
+        L4 = np.abs(L1 - L2)
+
+        sigma_L4 = np.std(L4)
+
+        criterion = k*sigma_L4 + I_max
+        slips_nr = 0
+
+        L4_diff = []
+        for j in range(1, len(L4)):
+            L4_diff.append(np.abs(L4[j] - L4[j-1]))
+            if (np.abs(L4[j] - L4[j-1]) > criterion):
+                # If satisfied, raise cycle-slip flag
+                slips_nr = slips_nr + 1
+
+        print('Sat:', sv[i],
+             ', Slips:', slips_nr,
+             ', Slip criterion:',  criterion.values)
+
+        return L4_diff, slips_nr, criterion, out_codes
 
     def plot_slips(self, obs, sat_nr: str):
         """
