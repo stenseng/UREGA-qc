@@ -17,7 +17,7 @@ import matplotlib.pyplot as plt
 
 from qc.multipath import Multipath
 # from qc.qc import qc
-# from qc.slips import slips
+from qc.slips import Slips
 from qc.helper_functions import helper_functions
 
 
@@ -100,3 +100,9 @@ mp = Multipath(obs,  # Observation file
 
 # Use function get_MP to get MP1
 MP = mp.get_MP()
+
+# %% Slips class testing
+codes = ['C1C', 'C2C', 'C5I', 'L1C', 'L2W']
+slips_class = Slips(obs, hdr, 'G14', 'G', codes=codes, rnx_version=3)
+
+slips = slips_class.get_slips()
