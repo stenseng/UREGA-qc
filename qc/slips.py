@@ -1,10 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-@author: Lars Stenseng.
-
-@mail: lars@stenseng.net
-"""
+"""@author: Magdalena Golofit."""
 # line 853 testing functions
 # from qc.__version__ import __version__
 
@@ -96,7 +92,7 @@ class Slips:
         """
         Cycle slip detection algorithm 1.
 
-        Based on Melbourne-Wuebbena,
+        Based on Melbourne-Wubbena,
         but only on carrier phase data (geometry-free combination)
         (from Vaclavovic-Dousa 2016 article)
 
@@ -150,8 +146,10 @@ class Slips:
         if obs_codes is None:
             return None, None
         else:
-            L1 = obs[obs_codes[3]]
-            L2 = obs[obs_codes[4]]
+            # L1 = obs[obs_codes[3]]
+            # L2 = obs[obs_codes[4]]
+            L1 = obs_codes[3]
+            L2 = obs_codes[4]
 
         L4 = np.abs(L1 - L2)
 
