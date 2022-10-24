@@ -17,7 +17,8 @@ import matplotlib.pyplot as plt
 
 from qc.multipath import Multipath
 # from qc.qc import qc
-# from qc.slips import slips
+from qc.slips import Slips
+from qc.helper_functions import helper_functions
 
 
 def procSigint(signum, frame):
@@ -72,8 +73,8 @@ rnx_version = 3
 
 # %%
 # Load obs file and header (RINEX 2)
-obs = gr.load("tests/test_data/Rinex2/klsq3070.21o", fast=False,
-              tlim=['2021-11-03T12:00:00', '2021-11-03T13:00:30'])
+obs = gr.load("tests/test_data/Rinex2/klsq3070.21o", fast=False)
+              # tlim=['2021-11-03T12:00:00', '2021-11-03T13:00:30'])
 hdr = gr.rinexheader("tests/test_data/Rinex2/klsq3070.21o")
 rnx_version = 2
 
@@ -99,3 +100,11 @@ mp = Multipath(obs,  # Observation file
 
 # Use function get_MP to get MP1
 MP = mp.get_MP()
+
+# %% Slips class testing
+codes = ['C1A', 'C8Q', 'C6A', 'L1C', 'L8I']
+# ['C1C', 'C2C', 'C5I', 'L1C', 'L2W']
+# obs, sv, hdr, constellation, codes, rnx_version
+slips_class = Slips(obs, 'E02', hdr, 'E', codes=codes, rnx_version=2)
+
+slips = slips_class.get_slips()
