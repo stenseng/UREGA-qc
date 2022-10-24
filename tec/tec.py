@@ -57,29 +57,7 @@ class TEC:
         self.receiverPos = receiverPos
         self.loadObsFile(obsFile, satellite)
         self.loadNavFile(navFile, satellite)
-        for setOfKepl in range(len(self.navFile.Toe)):
-            eph.addNav(
-                self.navFile.Toe[setOfKepl].data,
-                self.navFile.time[setOfKepl].data,
-                self.navFile.SVclockBias[setOfKepl].data,
-                self.navFile.SVclockDrift[setOfKepl].data,
-                self.navFile.SVclockDriftRate[setOfKepl].data,
-                self.navFile.sqrtA[setOfKepl].data**2,
-                self.navFile.Eccentricity[setOfKepl].data,
-                self.navFile.Io[setOfKepl].data,
-                self.navFile.omega[setOfKepl].data,
-                self.navFile.Omega0[setOfKepl].data,
-                self.navFile.M0[setOfKepl].data,
-                self.navFile.DeltaN[setOfKepl].data,
-                self.navFile.OmegaDot[setOfKepl].data,
-                self.navFile.IDOT[setOfKepl].data,
-                self.navFile.Cus[setOfKepl].data,
-                self.navFile.Cuc[setOfKepl].data,
-                self.navFile.Cis[setOfKepl].data,
-                self.navFile.Cic[setOfKepl].data,
-                self.navFile.Crs[setOfKepl].data,
-                self.navFile.Crc[setOfKepl].data,
-            )
+        eph.loadEph(navFile, satellite)
 
     def extractObsData(self) -> None:
         # Updating Time Parameters
