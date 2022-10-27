@@ -29,6 +29,7 @@ eph[sat] = Eph()
 tec[sat].loadData(obs, nav, sat, receiverPos, eph[sat])
 tec[sat].getRelativeTEC(eph[sat])
 tec[sat].offsetCorrectedTEC(threshold=math.radians(20))
+tec[sat].getVerticalTEC()
 
 # dcb = open('CAS0MGXRAP_20213070000_01D_01D_DCB.BSX')
 

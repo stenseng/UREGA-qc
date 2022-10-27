@@ -96,6 +96,32 @@ class Eph:
         theta = math.atan2(sin_theta, cos_theta)
 
         return theta
+    
+    def loadEph(self, navFile, satellite):
+        nav = navFile.sel(sv=satellite).dropna(dim='time',how='all')
+        for setOfKepl in range(len(nav.Toe)):
+            self.addNav(
+                nav.Toe[setOfKepl].data,
+                nav.time[setOfKepl].data,
+                nav.SVclockBias[setOfKepl].data,
+                nav.SVclockDrift[setOfKepl].data,
+                nav.SVclockDriftRate[setOfKepl].data,
+                nav.sqrtA[setOfKepl].data**2,
+                nav.Eccentricity[setOfKepl].data,
+                nav.Io[setOfKepl].data,
+                nav.omega[setOfKepl].data,
+                nav.Omega0[setOfKepl].data,
+                nav.M0[setOfKepl].data,
+                nav.DeltaN[setOfKepl].data,
+                nav.OmegaDot[setOfKepl].data,
+                nav.IDOT[setOfKepl].data,
+                nav.Cus[setOfKepl].data,
+                nav.Cuc[setOfKepl].data,
+                nav.Cis[setOfKepl].data,
+                nav.Cic[setOfKepl].data,
+                nav.Crs[setOfKepl].data,
+                nav.Crc[setOfKepl].data,
+            )
 
     def addNav(
         self,
@@ -192,7 +218,20 @@ class Eph:
         return weekSeconds
 
     def getTimestamp(self, t):
+        """
+        
 
+        Parameters
+        ----------
+        t : TYPE
+            DESCRIPTION.
+
+        Returns
+        -------
+        timestamp : TYPE
+            DESCRIPTION.
+
+        """
         if type(t) is not str:
             t_str = t.strftime("%Y-%m-%d %H:%M:%S")
         else:
