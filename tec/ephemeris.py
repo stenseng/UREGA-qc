@@ -57,10 +57,10 @@ class Eph:
             Dfxn = self.dfMtoE(xn, e)
             if Dfxn == 0:
                 print("Zero derivative. No solution found.")
-                return None
+                return np.nan
             xn = xn - fxn / Dfxn
         print("Exceeded maximum iterations. No solution found.")
-        return None
+        return np.nan
 
     def MtoE(self, E: float, M: float, e: float) -> float:
         f = E - M - e * math.sin(E)

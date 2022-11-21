@@ -5,8 +5,11 @@ Created on Mon May 23 14:28:17 2022
 @author: manue
 """
 import numpy as np
+from numpy import sin, cos
 from mpmath import sec
-import math
+from math import sqrt, nan, asin
+from itertools import compress
+from itertools import groupby
 
 k = 40.3082
 f1 = 1575.42*10**6  # [1/s]
@@ -25,6 +28,8 @@ class TEC:
         self.obsFile = []
         self.navFile = []
         self.receiverPos = []
+        self.numObs = []
+        self.numObsTrim = []
         # Relevant signals
         self.L1 = []
         self.L2 = []
@@ -32,6 +37,8 @@ class TEC:
         self.P2 = []
         # Ephemeris class output
         self.elevation = []
+        self.elevationMasked = []
+        self.mask = []
         self.azimuth = []
         self.distance = []
         self.x = []
@@ -47,11 +54,16 @@ class TEC:
         self.arcStartIndex = []
         self.arcEndIndex = []
         self.offset = []
+        self.offsetBool = []
         self.sigma = []
         # Intermediate values
         self.height = []
         self.elevTrim = []
         self.heightTrim = []
+        # Tests
+        self.key = []
+        self.group = []
+        self.elevationMask = []
     
     def loadObsFile(self, obsFile, satellite):
         self.obsFile = obsFile.sel(sv=satellite).dropna(dim='time',how='all')
@@ -60,9 +72,19 @@ class TEC:
         self.navFile = navFile.sel(sv=satellite).dropna(dim='time',how='all')
     
     def loadData(self, obsFile, navFile, satellite, receiverPos, eph):
-        self.receiverPos = receiverPos
+        self.receiverPos = np.array(receiverPos)
         self.loadObsFile(obsFile, satellite)
         self.loadNavFile(navFile, satellite)
+        self.numObs = len(self.obsFile.L1.data)
+        self.x = np.zeros(self.numObs, dtype = float)
+        self.y = np.zeros(self.numObs, dtype = float)
+        self.z = np.zeros(self.numObs, dtype = float)
+        self.height = np.zeros(self.numObs, dtype = float)
+        self.elevation = np.zeros(self.numObs, dtype = float)
+        self.distance = np.zeros(self.numObs, dtype = float)
+        self.azimuth = np.zeros(self.numObs, dtype = float)
+        self.TECcp = np.zeros(self.numObs, dtype = float)
+        self.TECpr = np.zeros(self.numObs, dtype = float)
         eph.loadEph(navFile, satellite)
 
     def extractObsData(self) -> None:
@@ -72,21 +94,23 @@ class TEC:
         self.P1 = self.obsFile.P1.data
         self.P2 = self.obsFile.P2.data
 
-    def carrierPhaseTEC(self, L1, L2) -> None:
+    def carrierPhaseTEC(self, L1, L2) -> float:
         if (not np.isnan(L1)) and (not np.isnan(L2)):
             deltaPhi = L1*Lambda1 - L2*Lambda2
             tec = deltaPhi*freqRatio*tecu
         else:
-            tec = math.nan
-        self.TECcp.append(tec)
+            tec = nan
+        
+        return tec
 
-    def pseudoRangeTEC(self, P1, P2) -> None:
+    def pseudoRangeTEC(self, P1, P2) -> float:
         if (not np.isnan(P1)) and (not np.isnan(P2)):
             deltaP = P2 - P1
             tec = deltaP*freqRatio*tecu
         else:
-            tec = math.nan
-        self.TECpr.append(tec)
+            tec = nan
+        
+        return tec
         
     def getRelativeTEC(self, eph):
         """
@@ -106,17 +130,17 @@ class TEC:
         for index, t in enumerate(self.obsFile.time.data):
             x_temp, y_temp, z_temp = eph.getXYZ(t, self.P1[index])
             e, a, d = eph.getEAD(x_temp, y_temp, z_temp, self.receiverPos)
-            h = math.sqrt(x_temp**2 + y_temp**2 + z_temp**2) - r_E
-            self.height.append(h)
-            self.x.append(x_temp)
-            self.y.append(y_temp)
-            self.z.append(z_temp)
-            self.elevation.append(e)
-            self.azimuth.append(a)
-            self.distance.append(d)
-            self.carrierPhaseTEC(self.L1[index], self.L2[index])
-            self.pseudoRangeTEC(self.P1[index], self.P2[index])
-
+            h = sqrt(x_temp**2 + y_temp**2 + z_temp**2) - r_E
+            self.height[index] = h
+            self.x[index] = x_temp
+            self.y[index] = y_temp
+            self.z[index] = z_temp
+            self.elevation[index] = e
+            self.azimuth[index] = a
+            self.distance[index] = d
+            self.TECcp[index] = self.carrierPhaseTEC(self.L1[index], self.L2[index])
+            self.TECpr[index] = self.pseudoRangeTEC(self.P1[index], self.P2[index])  
+        
     def offsetSingleArc(self, TECpr: float, TECcp: float, elevation: float):
         """
         Loops through the elevation array while the condition that the elevation
@@ -146,18 +170,20 @@ class TEC:
         den1 = 0
         den2 = 0
         idx = 0
+        
+        
         while elevation[idx] >= self.threshold:
             if (not np.isnan(TECpr[idx])) and (not np.isnan(TECcp[idx])):
                 diff = TECpr[idx] - TECcp[idx]
-                sumNum = sumNum + diff*math.sin(elevation[idx])
-                sumDen = sumDen + math.sin(elevation[idx])
+                sumNum = sumNum + diff*sin(elevation[idx])
+                sumDen = sumDen + sin(elevation[idx])
                 
                 # Quality control: computing weighted standard deviation
-                num1 = num1 + math.sin(elevation[idx])*diff**2
-                num2 = num2 + math.sin(elevation[idx])
-                num3 = num3 + math.sin(elevation[idx])*diff
-                den1 = den1 + math.sin(elevation[idx])
-                den2 = den2 + math.sin(elevation[idx])**2
+                num1 = num1 + sin(elevation[idx])*diff**2
+                num2 = num2 + sin(elevation[idx])
+                num3 = num3 + sin(elevation[idx])*diff
+                den1 = den1 + sin(elevation[idx])
+                den2 = den2 + sin(elevation[idx])**2
                 
             idx += 1
             try:
@@ -167,7 +193,7 @@ class TEC:
 
         offset = sumNum/sumDen
         self.offset.append(offset)
-        sigma = math.sqrt((num1*num2 - num3**2)/(den1**2 - den2))
+        sigma = sqrt((num1*num2 - num3**2)/(den1**2 - den2))
         self.sigma.append(sigma)
         #idx = idx - 1
 
@@ -200,7 +226,7 @@ class TEC:
                 return arcStart, arcFlag
                 break
         print("No more arcs were found")
-        arcStart = math.nan
+        arcStart = nan
         return arcStart, arcFlag
 
     def computeOffset(self, threshold):
@@ -250,6 +276,18 @@ class TEC:
         None.
 
         """
+        self.mask = self.elevation > threshold
+        self.mask.astype(np.int)
+        self.numObsTrim = np.sum(self.mask)
+        
+        self.elevationMasked = self.elevation[self.mask]
+        # self.elevationMasked = np.array(compress(self.elevation, self.mask))
+        self.elevationMask = np.array([self.mask.T, self.elevation.T])
+        for key, group in groupby(self.elevationMask, lambda x : x[0]):
+            self.key.append(key)
+            self.group.append(group)
+        
+        
         self.computeOffset(threshold)
         for i, off in enumerate(self.offset):
             self.TECr.append(self.TECcp[self.arcStartIndex[i]: \
@@ -266,8 +304,8 @@ class TEC:
         pass
 
     def getVerticalTEC(self):
+        self.offsetBool = sum((self.TECpr[self.mask] - self.TECcp[self.mask])*sin(self.elevationMasked[:]))/sum(sin(self.elevationMasked[:]))
         for i in range((len(self.offset))):
             for j in range(len(self.elevTrim[i][:])):
                 # self.TECv[i][j] = self.TECr[i][j] / sec(math.asin(r_E*math.cos(self.elevTrim[i][j])/(r_E + self.heightTrim[i][j])))
-                self.TECv.append(self.TECr[i][j] / sec(math.asin(r_E*math.cos(self.elevTrim[i][j])/(r_E + self.heightTrim[i][j]))))
-                
+                self.TECv.append(self.TECr[i][j] / sec(asin(r_E*cos(self.elevTrim[i][j])/(r_E + self.heightTrim[i][j])))) 

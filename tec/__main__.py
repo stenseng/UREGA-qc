@@ -19,7 +19,7 @@ obsFile = "klsq3070.21o"
 obs = gr.load(dataPath + obsFile, use='G')
 nav = gr.load(dataPath + navFile, use='G')
 hdr = gr.rinexheader(dataPath + obsFile)
-receiverPos = hdr["position"]
+receiverPos = np.array(hdr["position"])
 sat = 'G27'
 tec = {}
 eph = {}
@@ -31,6 +31,7 @@ tec[sat].getRelativeTEC(eph[sat])
 tec[sat].offsetCorrectedTEC(threshold=math.radians(20))
 tec[sat].getVerticalTEC()
 
+# https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/gnss_differential_code_bias_product.html
 # dcb = open('CAS0MGXRAP_20213070000_01D_01D_DCB.BSX')
 
 figure = plt.figure()
@@ -52,6 +53,12 @@ for i in range(len(tec[sat].TECr)):
         plt.ylabel('TECU') 
         plt.setp(axes.get_xticklabels(), rotation = 35)
         plt.show()
+plt.plot(tec[sat].obsFile.time[tec[sat].arcStartIndex[0]:tec[sat].arcEndIndex[0]], 
+         tec[sat].TECv[0:len(tec[sat].TECr[0])],'m')
+plt.plot(tec[sat].obsFile.time[tec[sat].arcStartIndex[1]:tec[sat].arcEndIndex[1]], 
+         tec[sat].TECv[len(tec[sat].TECr[0]):(len(tec[sat].TECr[0])+len(tec[sat].TECr[1]))],'m')
+plt.show()
+
 # %%
 satellites = obs.sv.data
 tec = {}
@@ -64,8 +71,9 @@ for sat in satellites:
     tec[sat].loadData(obs, nav, sat, receiverPos, eph[sat])
     tec[sat].getRelativeTEC(eph[sat])
     tec[sat].offsetCorrectedTEC(threshold=math.radians(20))
+    tec[sat].getVerticalTEC()
 
-dcb = open('CAS0MGXRAP_20213070000_01D_01D_DCB.BSX')
+#dcb = open('CAS0MGXRAP_20213070000_01D_01D_DCB.BSX')
 
 figure = plt.figure()
 axes = figure.add_subplot(1, 1, 1)
